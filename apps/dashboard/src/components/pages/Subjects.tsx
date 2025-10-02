@@ -1,4 +1,5 @@
-import { useState } from "react";
+// src/pages/Subjects.tsx
+import { useState, useEffect, useRef } from "react";
 import { Eye, X, Pencil, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -12,43 +13,10 @@ interface Subject {
   note: string;
 }
 
-const subjectsData: Subject[] = [
-  {
-    id: 1,
-    name: "Investigación de Sistemas de Información",
-    status: "green",
-    thumbnail: "/sylabus1.png",
-    note: "",
-  },
-  {
-    id: 2,
-    name: "Taller de Proyectos",
-    status: "red",
-    thumbnail: "/sylabus2.png",
-    note: "Debe corregir la bibliografía y los resultados de aprendizaje.",
-  },
-  {
-    id: 3,
-    name: "Algoritmos 2",
-    status: "yellow",
-    thumbnail: "/sylabus3.png",
-    note: "",
-  },
-];
-
 const statusMap: Record<Status, { color: string; label: string }> = {
-  green: {
-    color: "bg-green-500",
-    label: "Aprobado",
-  },
-  red: {
-    color: "bg-red-500",
-    label: "Modificaciones pendientes",
-  },
-  yellow: {
-    color: "bg-yellow-400",
-    label: "Pendiente de aprobación",
-  },
+  green: { color: "bg-green-500", label: "Aprobado" },
+  red: { color: "bg-red-500", label: "Modificaciones pendientes" },
+  yellow: { color: "bg-yellow-400", label: "Pendiente de aprobación" },
 };
 
 export default function Subjects() {
@@ -56,9 +24,67 @@ export default function Subjects() {
   const [modal, setModal] = useState<{ open: boolean; subject?: Subject }>({
     open: false,
   });
-  const navigate = useNavigate(); // Agrega esto
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  const filtered = subjectsData.filter((s) =>
+  const didFetchRef = useRef(false);
+
+  useEffect(() => {
+    if (didFetchRef.current) return;
+    didFetchRef.current = true;
+
+    const fetchSubjects = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(
+          "http://localhost:7071/api/docente/asignaturas/all",
+        );
+        if (!response.ok) {
+          throw new Error(`Error en la API: ${response.status}`);
+        }
+        const json = await response.json();
+        const backendRaw = json?.data ?? [];
+
+        if (!Array.isArray(backendRaw) || backendRaw.length === 0) {
+          setSubjects([]);
+          setError("No se encontraron asignaturas");
+          return;
+        }
+
+        const formatted = backendRaw.map(
+          (item: any): Subject => ({
+            id: Number(item.idSilabo),
+            name: item.cursoNombre ?? "Sin nombre",
+
+            status: item.semestreAcademico === "2025-II" ? "yellow" : "green",
+            thumbnail: "/sylabus-default.png",
+            note: `${item.docentesText ?? "Docente(s)"} • Ciclo: ${
+              item.ciclo ?? "-"
+            } • Código: ${item.cursoCodigo ?? "-"}`,
+          }),
+        );
+
+        const uniqueById = Array.from(
+          new Map(formatted.map((s) => [s.id, s])).values(),
+        );
+
+        setSubjects(uniqueById);
+      } catch (err) {
+        console.error("Error al cargar asignaturas:", err);
+        setError("Error al cargar asignaturas");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSubjects();
+  }, []);
+
+  // Búsqueda por nombre
+  const filteredSubjects = subjects.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase()),
   );
 
@@ -66,7 +92,7 @@ export default function Subjects() {
     <div className="max-w-3xl mx-auto">
       <h1 className="text-3xl font-bold mb-8">Mis Asignaciones</h1>
 
-      {/* Buscador con ícono */}
+      {/* Buscador */}
       <div className="mb-8 flex items-center gap-2">
         <div className="relative w-80">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -74,7 +100,7 @@ export default function Subjects() {
           </span>
           <input
             type="text"
-            placeholder="Search"
+            placeholder="Buscar asignatura..."
             className="border border-gray-300 rounded px-9 py-2 w-full focus:outline-none"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -82,35 +108,47 @@ export default function Subjects() {
         </div>
       </div>
 
-      {/* Cards */}
+      {loading && (
+        <div className="text-center py-8">Cargando asignaturas...</div>
+      )}
+      {error && (
+        <div className="text-center text-red-500 py-8">Error: {error}</div>
+      )}
+
       <div className="space-y-5">
-        {filtered.map((subject) => (
-          <div
-            key={subject.id}
-            className="flex items-center justify-between px-7 py-5 bg-white border border-gray-300 rounded-2xl transition"
-          >
-            <span className="text-base font-semibold text-gray-800">
-              {subject.name}
-            </span>
-            <div className="flex items-center gap-4">
-              {/* Íconos de estado y acciones */}
-              {subject.status === "red" && (
-                <button
-                  onClick={() =>
-                    navigate(
-                      `/create-course?subject=${encodeURIComponent(subject.name)}`,
-                    )
-                  }
-                  aria-label="Editar sílabo"
-                >
-                  <Pencil className="w-6 h-6 text-blue-500" />
-                </button>
-              )}
-              <span
-                className={`w-5 h-5 rounded-full border border-gray-300 ${statusMap[subject.status].color}`}
-                title={statusMap[subject.status].label}
-              ></span>
-              {(subject.status === "green" || subject.status === "red") && (
+        {filteredSubjects.length === 0 && !loading ? (
+          <div className="text-center py-8 text-gray-500">
+            No se encontraron asignaturas
+          </div>
+        ) : (
+          filteredSubjects.map((subject) => (
+            <div
+              key={subject.id}
+              className="flex items-center justify-between px-7 py-5 bg-white border border-gray-300 rounded-2xl transition"
+            >
+              <span className="text-base font-semibold text-gray-800">
+                {subject.name}
+              </span>
+              <div className="flex items-center gap-4">
+                {/* ✏️ Solo aparece si el estado es rojo o amarillo */}
+                {(subject.status === "red" || subject.status === "yellow") && (
+                  <button
+                    onClick={() =>
+                      navigate(
+                        `/create-course?subject=${encodeURIComponent(subject.name)}`,
+                      )
+                    }
+                    aria-label="Editar sílabo"
+                  >
+                    <Pencil className="w-6 h-6 text-blue-500" />
+                  </button>
+                )}
+
+                <span
+                  className={`w-5 h-5 rounded-full border border-gray-300 ${statusMap[subject.status].color}`}
+                  title={statusMap[subject.status].label}
+                ></span>
+
                 <button
                   className="flex items-center"
                   onClick={() => setModal({ open: true, subject })}
@@ -118,10 +156,10 @@ export default function Subjects() {
                 >
                   <Eye className="w-6 h-6 text-gray-700 hover:text-blue-600 transition-colors" />
                 </button>
-              )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Modal */}
@@ -141,28 +179,8 @@ export default function Subjects() {
               alt="Miniatura del sílabo"
               className="mx-auto mb-4 border shadow max-h-64"
             />
-            {modal.subject.status === "green" && (
-              <a
-                href={modal.subject.thumbnail}
-                download
-                className="inline-block bg-red-500 text-white px-6 py-2 rounded-full font-semibold hover:bg-red-600 transition"
-              >
-                Descargar
-              </a>
-            )}
-            {modal.subject.status === "red" && (
-              <>
-                <div className="text-red-600 font-medium mb-2">
-                  {modal.subject.note}
-                </div>
-                <a
-                  href={modal.subject.thumbnail}
-                  download
-                  className="inline-block bg-red-500 text-white px-6 py-2 rounded-full font-semibold hover:bg-red-600 transition"
-                >
-                  Descargar
-                </a>
-              </>
+            {modal.subject.note && (
+              <p className="text-gray-600">{modal.subject.note}</p>
             )}
           </div>
         </div>
