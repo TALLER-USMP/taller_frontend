@@ -13,6 +13,8 @@ interface Subject {
   note: string;
 }
 
+type ModalState = { open: false } | { open: true; subject: Subject };
+
 const statusMap: Record<Status, { color: string; label: string }> = {
   green: { color: "bg-green-500", label: "Aprobado" },
   red: { color: "bg-red-500", label: "Modificaciones pendientes" },
@@ -21,15 +23,15 @@ const statusMap: Record<Status, { color: string; label: string }> = {
 
 export default function Subjects() {
   const [search, setSearch] = useState("");
-  const [modal, setModal] = useState<{ open: boolean; subject?: Subject }>({
-    open: false,
-  });
+  const [modal, setModal] = useState<ModalState>({ open: false });
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-
   const didFetchRef = useRef(false);
+
+  // ID fijo del docente    (PARA SPRINT 1)
+  const currentTeacherId = "1";
 
   useEffect(() => {
     if (didFetchRef.current) return;
@@ -38,41 +40,40 @@ export default function Subjects() {
     const fetchSubjects = async () => {
       setLoading(true);
       setError(null);
+
       try {
         const response = await fetch(
-          "http://localhost:7071/api/docente/asignaturas/all",
+          `http://localhost:7071/api/docente/${currentTeacherId}/asignaturas`,
         );
-        if (!response.ok) {
+
+        if (!response.ok)
           throw new Error(`Error en la API: ${response.status}`);
-        }
+
         const json = await response.json();
         const backendRaw = json?.data ?? [];
 
         if (!Array.isArray(backendRaw) || backendRaw.length === 0) {
           setSubjects([]);
-          setError("No se encontraron asignaturas");
+          setError("No se encontraron asignaturas para este docente");
           return;
         }
 
-        const formatted = backendRaw.map(
-          (item: any): Subject => ({
-            id: Number(item.idSilabo),
-            name: item.cursoNombre ?? "Sin nombre",
+        const formattedSubjects: Subject[] = backendRaw.map((item: any) => ({
+          id: Number(item.idSilabo),
+          name: item.cursoNombre ?? "Sin nombre",
+          status: item.semestreAcademico === "2025-II" ? "yellow" : "green",
+          thumbnail: "/sylabus-default.png",
+          note: `${item.docentesText ?? "Docente(s)"} • Ciclo: ${
+            item.ciclo ?? "-"
+          } • Código: ${item.cursoCodigo ?? "-"}`,
+        }));
 
-            status: item.semestreAcademico === "2025-II" ? "yellow" : "green",
-            thumbnail: "/sylabus-default.png",
-            note: `${item.docentesText ?? "Docente(s)"} • Ciclo: ${
-              item.ciclo ?? "-"
-            } • Código: ${item.cursoCodigo ?? "-"}`,
-          }),
+        const uniqueSubjects = Array.from(
+          new Map(formattedSubjects.map((s) => [s.id, s])).values(),
         );
 
-        const uniqueById = Array.from(
-          new Map(formatted.map((s) => [s.id, s])).values(),
-        );
-
-        setSubjects(uniqueById);
-      } catch (err) {
+        setSubjects(uniqueSubjects);
+      } catch (err: any) {
         console.error("Error al cargar asignaturas:", err);
         setError("Error al cargar asignaturas");
       } finally {
@@ -81,9 +82,8 @@ export default function Subjects() {
     };
 
     fetchSubjects();
-  }, []);
+  }, [currentTeacherId]);
 
-  // Búsqueda por nombre
   const filteredSubjects = subjects.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase()),
   );
@@ -130,7 +130,6 @@ export default function Subjects() {
                 {subject.name}
               </span>
               <div className="flex items-center gap-4">
-                {/* ✏️ Solo aparece si el estado es rojo o amarillo */}
                 {(subject.status === "red" || subject.status === "yellow") && (
                   <button
                     onClick={() =>
@@ -163,7 +162,7 @@ export default function Subjects() {
       </div>
 
       {/* Modal */}
-      {modal.open && modal.subject && (
+      {modal.open && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-8 relative w-full max-w-md text-center">
             <button
@@ -173,15 +172,14 @@ export default function Subjects() {
             >
               <X className="w-6 h-6" />
             </button>
+
             <h2 className="text-xl font-semibold mb-4">{modal.subject.name}</h2>
             <img
               src={modal.subject.thumbnail}
               alt="Miniatura del sílabo"
               className="mx-auto mb-4 border shadow max-h-64"
             />
-            {modal.subject.note && (
-              <p className="text-gray-600">{modal.subject.note}</p>
-            )}
+            <p className="text-gray-600 mt-4">{modal.subject.note}</p>
           </div>
         </div>
       )}
