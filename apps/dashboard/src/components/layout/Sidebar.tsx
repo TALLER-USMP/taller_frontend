@@ -1,4 +1,4 @@
-import { Home, BookOpen } from "lucide-react";
+import { Home, BookOpen, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import usmpLogo from "../../assets/Logo_FIA.png";
 
@@ -27,6 +27,15 @@ export default function Sidebar() {
               className="flex items-center gap-3 p-2 rounded hover:bg-gray-700"
             >
               <BookOpen size={18} /> Asignaturas
+            </Link>
+          </li>
+          {/* 🚀 Nuevo acceso directo para tu editor de sílabo */}
+          <li>
+            <Link
+              to="/syllabus/demo"
+              className="flex items-center gap-3 p-2 rounded hover:bg-gray-700"
+            >
+              <FileText size={18} /> Editar sílabo
             </Link>
           </li>
         </ul>
