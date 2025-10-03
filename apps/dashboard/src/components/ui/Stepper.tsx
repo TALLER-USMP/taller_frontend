@@ -1,43 +1,44 @@
-import { cn } from "../../lib/utils";
+type Base = { onStepClick?: (step: number) => void };
+type LegacyProps = Base & { step: number; total?: number };
+type NewProps = Base & { currentStep: number; totalSteps?: number };
+type Props = LegacyProps | NewProps;
 
-interface StepperProps {
-  currentStep: number;
-  totalSteps: number;
-  onStepClick?: (step: number) => void;
+function isNewProps(p: Props): p is NewProps {
+  return "currentStep" in p || "totalSteps" in p;
 }
 
-export default function Stepper({
-  currentStep,
-  totalSteps,
-  onStepClick,
-}: StepperProps) {
-  const steps = Array.from({ length: totalSteps }, (_, i) => i + 1);
+export default function Stepper(props: Props) {
+  const currentStep = isNewProps(props)
+    ? props.currentStep
+    : (props as LegacyProps).step;
+
+  const total = isNewProps(props)
+    ? (props.totalSteps ?? 5)
+    : ((props as LegacyProps).total ?? 5);
+
+  const onStepClick = props.onStepClick;
+
+  const items = Array.from({ length: total }, (_, i) => i);
 
   return (
-    <div className="flex items-center justify-center mb-8">
-      {steps.map((step, index) => (
-        <div key={step} className="flex items-center">
-          <div
-            className={cn(
-              "w-12 h-12 rounded-full flex items-center justify-center text-lg font-semibold transition-all cursor-pointer",
-              step === currentStep
-                ? "bg-red-500 text-white"
-                : step < currentStep
-                  ? "bg-gray-400 text-white"
-                  : "bg-gray-200 text-gray-600 hover:bg-gray-300",
-            )}
-            onClick={() => onStepClick?.(step)}
+    <div className="flex items-center gap-6 my-6">
+      {items.map((i) => (
+        <div key={i} className="flex items-center gap-6">
+          <button
+            type="button"
+            onClick={() => onStepClick?.(i)}
+            className={[
+              "w-12 h-12 rounded-full flex items-center justify-center border-2 text-lg focus:outline-none",
+              i === currentStep
+                ? "bg-red-600 text-white border-red-600"
+                : "bg-white text-black border-gray-300",
+            ].join(" ")}
+            aria-current={i === currentStep ? "step" : undefined}
+            aria-label={`Paso ${i + 1}`}
           >
-            {step}
-          </div>
-          {index < steps.length - 1 && (
-            <div
-              className={cn(
-                "w-8 h-1 mx-2",
-                step < currentStep ? "bg-gray-400" : "bg-gray-200",
-              )}
-            />
-          )}
+            {i + 1}
+          </button>
+          {i < items.length - 1 && <div className="w-12 h-[2px] bg-gray-300" />}
         </div>
       ))}
     </div>
