@@ -1,22 +1,33 @@
 ﻿export default function StepSumilla() {
   return (
-    <div className="space-y-3">
-      <h2 className="text-lg font-semibold">2. Sumilla</h2>
-      <textarea
-        className="w-full border rounded p-3"
-        rows={6}
-        placeholder="Es de carácter aplicativo..."
-      />
-      <h3 className="text-lg font-semibold">2. Unidades</h3>
-      <div className="grid grid-cols-2 gap-4">
-        <input className="border rounded p-2" placeholder="Unidad I: Título" />
-        <input className="border rounded p-2" placeholder="Unidad II: Título" />
-        <input
-          className="border rounded p-2"
-          placeholder="Unidad III: Título"
-        />
-        <input className="border rounded p-2" placeholder="Unidad IV: Título" />
+    <section className="space-y-3">
+      <h2 className="text-xl font-bold">
+        2. Sumilla <span title="ayuda">ℹ️</span>
+      </h2>
+      <div className="rounded-xl border border-gray-300 p-5">
+        <p className="leading-7 text-gray-800">
+          Es de carácter aplicativo; permitirá al estudiante desarrollar su
+          capacidad para resolver una situación problemática real a través del
+          desarrollo de un proyecto altamente innovador…
+        </p>
       </div>
-    </div>
+      <h2 className="text-xl font-bold mt-6">
+        2. Unidades <span title="ayuda">ℹ️</span>
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {[
+          "Unidad I: Título",
+          "Unidad II: Título",
+          "Unidad III: Título",
+          "Unidad IV: Título",
+        ].map((txt) => (
+          <input
+            key={txt}
+            className="border rounded-md px-3 py-2"
+            placeholder={txt}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
