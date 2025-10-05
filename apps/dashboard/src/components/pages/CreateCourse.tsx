@@ -1,5 +1,7 @@
 import { useState } from "react";
 import LayoutStep from "../layout/LayoutStep";
+import Step1 from "./Step1";
+import type { Step1Data } from "./Step1";
 import Step7 from "./Step7";
 import Step9 from "./Step9";
 
@@ -17,6 +19,7 @@ interface ContributionsData {
 }
 
 interface CourseFormData {
+  step1: Step1Data;
   generalData: {
     courseCode: string;
     courseName: string;
@@ -30,6 +33,18 @@ const TOTAL_STEPS = 9;
 export default function CreateCourse() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<CourseFormData>({
+    step1: {
+      courseName: "INGENIERIA DE SOFTWARE II",
+      courseCode: "09013707052",
+      summary: "Esta especialización está diseñada para estudiantes que desean profundizar en el desarrollo de software utilizando metodologías ágiles. Los estudiantes aprenderán a trabajar en equipos colaborativos, aplicar principios de desarrollo ágil y crear productos de software de alta calidad. El curso incluye actividades prácticas que simulan entornos de trabajo reales, incluyendo fases de inicio, planificación, implementación, revisión, retrospectiva y lanzamiento. Los estudiantes utilizarán herramientas y metodologías modernas como desarrollo ágil, diseño centrado en el usuario, programación en parejas, pruebas de software automatizadas y gestión de proyectos ágiles.",
+      conceptualContents: [
+        "Proceso del producto con metodología ágil: fases de inicio, planificación y estimación",
+        "Proceso del producto con metodología ágil: fase de desarrollo",
+        "Proceso del producto con metodología ágil: fase de revisión y retrospectiva",
+        "Proceso del producto con metodología ágil: fase de lanzamiento",
+      ],
+      units: [],
+    },
     generalData: {
       courseCode: "09013707052",
       courseName: "INGENIERIA DE SOFTWARE II",
@@ -69,6 +84,13 @@ export default function CreateCourse() {
   };
 
   // Handlers para actualizar datos de cada paso
+  const handleStep1Change = (data: Step1Data) => {
+    setFormData((prev) => ({
+      ...prev,
+      step1: data,
+    }));
+  };
+
   const handleStep7Change = (data: ConsultationSourcesData) => {
     setFormData((prev) => ({
       ...prev,
@@ -86,6 +108,14 @@ export default function CreateCourse() {
   // Renderizar el contenido de cada paso
   const renderStepContent = () => {
     switch (currentStep) {
+      case 1:
+        return (
+          <Step1
+            data={formData.step1}
+            onChange={handleStep1Change}
+          />
+        );
+
       case 7:
         return (
           <Step7
